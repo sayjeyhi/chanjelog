@@ -10,7 +10,7 @@
 
 NOW=$(date +'%Y-%m-%d %H:%M:%S')
 CURRENT_GIT_VERSION=$(git describe --tags --abbrev=0 || '1.0.0')
-NEW_GIT_VERSION=$(bash ./semver bump patch $CURRENT_GIT_VERSION)
+NEW_GIT_VERSION=$(bash ./utils/semver bump patch $CURRENT_GIT_VERSION)
 NEW_TAG_CHANGES=$(git log --no-merges --pretty=format:"- %s (**%cn** - %cr)" HEAD...$CURRENT_GIT_VERSION)
 
 echo "## $NEW_GIT_VERSION" > changeslog.md
