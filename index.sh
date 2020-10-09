@@ -22,3 +22,5 @@ echo "" >> changeslog.md
 cat ../changeslog.md >> changeslog.md
 mv changeslog.md ../changeslog.md
 git tag -a $NEW_GIT_VERSION -m "$NEW_TAG_CHANGES"
+
+echo "🚀 version $NEW_GIT_VERSION pushed successfully"
