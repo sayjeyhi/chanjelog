@@ -1,3 +1,4 @@
+```bash
    ___ _                  _        __
   / __\ |__   __ _ _ __  (_) ___  / /  ___   __ _
  / /  | '_ \ / _' | '_ \ | |/ _ \/ /  / _ \ / _' |
@@ -20,3 +21,4 @@ flag  |  description
 You should have CI_USER and CI_ACCESS_TOKEN to allow ci to update your git.
 ---
 An open source hack by @sayjeyhi - https://sayjeyhi.com with SemVer2.0.0
+```
