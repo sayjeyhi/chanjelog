@@ -26,12 +26,12 @@ You should have CI_USER and CI_ACCESS_TOKEN variables to allow ci to update your
 An open source hack by @sayjeyhi - https://sayjeyhi.com with SemVer2.0.0
 ```
 
-### Getting started
+## Getting started
 Just download `index.sh` file and put it in your files, then you can run it in your CI flow
 easily with pure bash, it will do all of `semver` managing and `changeslog` generating jobs
 for you without any extra config!
 
-### Features
+## Features
 As you can figure out from abow section and also in `chanjeslog -h`, we have:
 - auto version detect
 - auto connect to git repo
@@ -42,8 +42,11 @@ As you can figure out from abow section and also in `chanjeslog -h`, we have:
 - good configurable params
 - ..
 
+## Examples
+
 ### Gitlab ci
-Example configuration for gitlab CI
+Example configuration for gitlab CI, create a file named `.gitlab-ci.yml` in your project, then register an runner to
+run you CI, then put a content like this in your `git-lab-ci.yml` file:
 
 ```yml
 stages:
