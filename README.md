@@ -42,3 +42,53 @@ As you can figure out from abow section and also in `chanjeslog -h`, we have:
 - good configurable params
 - ..
 
+### Gitlab ci
+Example configuration for gitlab CI
+
+```yml
+stages:
+  - changeVersion
+
+prod:changeVersion:
+  variables:
+    GIT_STRATEGY: fetch
+    GIT_FETCH_EXTRA_FLAGS: --tags
+  only:
+    - master
+  tags:
+    - staging
+  when: always
+  stage: changeVersion
+  before_script:
+    - git config --global user.email "git@site.com"
+    - git config --global user.name "githuser"
+  script:
+    - bash ./scripts/changeLog/index.sh -r 'gitsite.com/project.git'
+```
+
+### Github actions
+Actually it is easy to do with github too, get the `index.sh` and put is some where is your project, like where I did mostly in
+`./scripts/changeLog/index.sh` then just create a file: `.github/workflows/chanjelog.yml` 
+and put a content like this in it:
+```yml
+name: Release
+
+on:
+  push:
+    branches:
+      - develop
+
+jobs:
+  release:
+    name: Release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@master
+        with:
+          # This makes Actions fetch all Git history so that Changesets can generate changelogs with the correct commits
+          fetch-depth: 0
+
+      - name: Generate changeslog
+        run: bash ./scripts/changeLog/index.sh -r 'github.com/someUser/repo.git'
+```
