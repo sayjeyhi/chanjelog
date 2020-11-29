@@ -106,7 +106,7 @@ function generateVersion {
   exit 0
 }
 
-if [ "$1" == "-h" ]; then
+if [ -z "$1" ] && [ "$1" == "-h" ]; then
   echo "$usage"
   exit 0
 fi
@@ -147,74 +147,81 @@ CURRENT_GIT_VERSION=$(git tag| sort -V | tail -n1 || '1.0.0')
 NEW_GIT_VERSION=$(generateVersion "$VERSION_BUMP_TYPE" "$CURRENT_GIT_VERSION")
 NEW_TAG_CHANGES=$(git log --no-merges --pretty=format:"- %s (**%cn** - %cr)" HEAD..."$CURRENT_GIT_VERSION")
 
+# Main script content
+function main {
+  # Make changes log file
+  if [ "$GENERATE_CHANGES_LOG" != "0" ]; then
+    echo "✔ Generating changeslog file"
+    CHANGES_LOG_FILE="$dir/changeslog.md"
+    CHANGES_LOG_TEMP_FILE="$dir/_changeslog.md"
+    CHANGES_LOG_CONTENT=""
+
+    if [ -e "$CHANGES_LOG_FILE" ]
+    then
+      CHANGES_LOG_CONTENT=$(cat "$CHANGES_LOG_FILE")
+    fi
+
+    echo "## $NEW_GIT_VERSION" > "$CHANGES_LOG_TEMP_FILE"
+    {
+      echo "$NOW"
+      echo ""
+      echo "$NEW_TAG_CHANGES"
+      echo ""
+      echo ""
+      echo "$CHANGES_LOG_CONTENT"
+    }  >> "$CHANGES_LOG_TEMP_FILE"
+
+    echo "✔ Writing changeslog file"
+    mv "$CHANGES_LOG_TEMP_FILE" "$CHANGES_LOG_FILE"
+
+    # Find task ids and link to them
+    if [ "${URL_PREFIX+1}" ];then
+      sed -i -e "s/#[0-9]/$URL_PREFIX/" "$CHANGES_LOG_FILE"
+    fi
+
+    # add file to git
+    git add changeslog.md
+  fi
+
+  # Update docker env to use version in runtime
+  if [ "${VERSION_CHANGE_FILE+1}" ];then
+    VERSION_FILE="$dir/$VERSION_CHANGE_FILE"
+    echo "✔ Updating version $NEW_GIT_VERSION on $VERSION_CHANGE_FILE"
+    sed -i -e "s/$FILE_SEARCH_PATTERN/$FILE_REPLACE_PATTERN$NEW_GIT_VERSION/g" "$VERSION_FILE"
+  fi
+
+  # Update remote branch
+  declare -a commitParams
+  commitParams=(changeslog.md )
+  if [ "${VERSION_CHANGE_FILE+1}" ];then
+    # shellcheck disable=SC2206
+    commitParams+=($VERSION_CHANGE_FILE)
+  fi
+  commitParams+=(-m "🎉 Release v$NEW_GIT_VERSION [skip ci]")
+
+  echo "✔ Committing changes..."
+  git commit "${commitParams[@]}" > /dev/null 2>&1
+
+
+  echo "✔ Pushing changes to git repo..."
+  git push "http://$CI_USER:$CI_ACCESS_TOKEN@$GIT_REPO" HEAD:master -o ci.skip --follow-tags > /dev/null 2>&1
+
+
+  # add release tag and note
+  if [ "${ADD_GIT_TAG+1}" ] && [ "$ADD_GIT_TAG" != "0" ]; then
+    echo "✔ Adding tag $NEW_GIT_VERSION to git..."
+    git tag -a "$NEW_GIT_VERSION" -m "$NEW_TAG_CHANGES"
+    git push "http://$CI_USER:$CI_ACCESS_TOKEN@$GIT_REPO" HEAD:master --tags -o ci.skip > /dev/null 2>&1
+  fi
+
+  # Show message of push
+  echo "🚀 Version $NEW_GIT_VERSION pushed successfully"
+}
+
 echo "  🦑 Cuurent version: $CURRENT_GIT_VERSION > new version: $NEW_GIT_VERSION"
 
-
-# Make changes log file
-if [ "$GENERATE_CHANGES_LOG" != "0" ]; then
-  echo "✔ Generating changeslog file"
-  CHANGES_LOG_FILE="$dir/changeslog.md"
-  CHANGES_LOG_TEMP_FILE="$dir/_changeslog.md"
-  CHANGES_LOG_CONTENT=""
-
-  if [ -e "$CHANGES_LOG_FILE" ]
-  then
-    CHANGES_LOG_CONTENT=$(cat "$CHANGES_LOG_FILE")
-  fi
-
-  echo "## $NEW_GIT_VERSION" > "$CHANGES_LOG_TEMP_FILE"
-  {
-    echo "$NOW"
-    echo ""
-    echo "$NEW_TAG_CHANGES"
-    echo ""
-    echo ""
-    echo "$CHANGES_LOG_CONTENT"
-  }  >> "$CHANGES_LOG_TEMP_FILE"
-
-  echo "✔ Writing changeslog file"
-  mv "$CHANGES_LOG_TEMP_FILE" "$CHANGES_LOG_FILE"
-
-  # Find task ids and link to them
-  if [ "${URL_PREFIX+1}" ];then
-    sed -i -e "s/#[0-9]/$URL_PREFIX/" "$CHANGES_LOG_FILE"
-  fi
-
-  # add file to git
-  git add changeslog.md
+if [ -z "$NEW_TAG_CHANGES" ]; then
+  echo "✔ No changes detected."
+else
+  main
 fi
-
-# Update docker env to use version in runtime
-if [ "${VERSION_CHANGE_FILE+1}" ];then
-  VERSION_FILE="$dir/$VERSION_CHANGE_FILE"
-  echo "✔ Updating version $NEW_GIT_VERSION on $VERSION_CHANGE_FILE"
-  sed -i -e "s/$FILE_SEARCH_PATTERN/$FILE_REPLACE_PATTERN$NEW_GIT_VERSION/g" "$VERSION_FILE"
-fi
-
-# Update remote branch
-declare -a commitParams
-commitParams=(changeslog.md )
-if [ "${VERSION_CHANGE_FILE+1}" ];then
-  # shellcheck disable=SC2206
-  commitParams+=($VERSION_CHANGE_FILE)
-fi
-commitParams+=(-m "🎉 Release v$NEW_GIT_VERSION [skip ci]")
-
-echo "✔ Committing changes..."
-git commit "${commitParams[@]}" > /dev/null 2>&1
-
-
-echo "✔ Pushing changes to git repo..."
-git push "http://$CI_USER:$CI_ACCESS_TOKEN@$GIT_REPO" HEAD:master -o ci.skip --follow-tags > /dev/null 2>&1
-
-
-# add release tag and note
-if [ "${ADD_GIT_TAG+1}" ] && [ "$ADD_GIT_TAG" != "0" ]; then
-  echo "✔ Adding tag $NEW_GIT_VERSION to git..."
-  git tag -a "$NEW_GIT_VERSION" -m "$NEW_TAG_CHANGES"
-  git push "http://$CI_USER:$CI_ACCESS_TOKEN@$GIT_REPO" HEAD:master --tags -o ci.skip > /dev/null 2>&1
-fi
-
-# Show message of push
-echo "🚀 Version $NEW_GIT_VERSION pushed successfully"
-
